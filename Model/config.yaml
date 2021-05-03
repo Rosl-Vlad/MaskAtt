@@ -1,0 +1,65 @@
+train:
+  run_name: ""
+  log_file: logs
+  checkpoints: checkpoints
+
+  image_size: 128 #defalt size - 128; for others sizes you should generate mask with needed size
+
+  fit:
+    num_epoch: 200
+    lr: 0.0002
+    save_interval: 5000
+    valid_interval: 3000
+    lmd1: 100
+    lmd2: 10
+    lmd3: 1
+    lbdGP: 10
+
+  generator:
+    enc_l: 5
+    dec_l: 5
+    mask_l: 3
+    inject: 3
+    STU: 3
+    in_channel: 64
+    save_enable: true
+
+  discriminator:
+    enc_l: 5
+    fc_dim: 1024
+    in_channel: 64
+    save_enable: false
+
+  GPU:
+    enable: "true"
+    name: "cuda:0"
+
+  wandb:
+    enable: "true"
+    project: "face-attributes"
+    entity: "vroslovets"
+    logs_iter: 200
+    run_name: ""
+
+  data:
+    batch_size: 32
+    batch_size_valid: 16
+    loader_jobs: 8
+    base: data
+    images: img_align_celeba/img_align_celeba
+    masks: masks
+    attrs: list_attr_celeba.csv
+    num_attrs: 12
+    attributes:
+      - "Bangs"
+      - "Black_Hair"
+      - "Blond_Hair"
+      - "Brown_Hair"
+      - "Bushy_Eyebrows"
+      - "Eyeglasses"
+      - "Male"
+      - "Mouth_Slightly_Open"
+      - "Mustache"
+      - "No_Beard"
+      - "Pale_Skin"
+      - "Young"
