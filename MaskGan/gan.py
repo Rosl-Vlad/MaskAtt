@@ -280,7 +280,7 @@ class GAN:
         df_loss = -wd
         df_gp = gradient_penalty(self.D, images, img_fake, self.cfg["GPU"]["name"])
         dc_loss = F.binary_cross_entropy_with_logits(dc_real, attr_a)
-        d_loss = self.lmd1 * df_loss + self.lmdGP * df_gp + self.lmd3 * dc_loss
+        d_loss = self.lmd3 * df_loss + self.lmdGP * df_gp + self.lmd3 * dc_loss
 
         self.opt_D.zero_grad()
         d_loss.backward()
