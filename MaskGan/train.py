@@ -121,6 +121,8 @@ def train(cfg):
     it = 0
     for i in range(cfg["fit"]["num_epoch"]):
         for images, attr_a, attr_b, mask in tqdm(train_loader):
+            g.set_mode("train")
+
             it += 1
 
             attr_a = attr_a.type(torch.float)
@@ -145,12 +147,11 @@ def train(cfg):
             if it % cfg["fit"]["valid_interval"] == 0:
                 g.set_mode(mode='eval')
                 validate_data(cfg, g, validation_data, i, it)
-                g.set_mode(mode='train')
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', dest='config', type=str, default='config.yaml')
+    parser.add_argument('--config', dest='config', type=str, default='config_local.yaml')
     args = parser.parse_args()
 
     f = open(args.config, 'r')

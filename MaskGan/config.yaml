@@ -8,8 +8,8 @@ train:
   fit:
     num_epoch: 200
     lr: 0.0002
-    save_interval: 2000
-    valid_interval: 2000
+    save_interval: 10000
+    valid_interval: 1000
     lmd1: 100
     lmd2: 10
     lmd3: 1
@@ -35,7 +35,7 @@ train:
     name: "cuda:6"
 
   wandb:
-    enable: false
+    enable: true
     project: "face-attributes"
     entity: "vroslovets"
     logs_iter: 200

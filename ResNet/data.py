@@ -10,21 +10,21 @@ from sklearn.model_selection import train_test_split
 from MaskGan import load_data
 
 
+transform = transforms.Compose([transforms.ToPILImage(),
+                                transforms.RandomAffine(0, translate=(0.1, 0.1)),
+                                transforms.CenterCrop(190),
+                                transforms.Resize((128, 128)),
+                                transforms.ToTensor(),
+                                transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                                     std=[0.5, 0.5, 0.5])])
+
+
 class DatasetLoader(Dataset):
     def __init__(self, path, image_names, attr_images):
         super().__init__()
         self.labels = attr_images
         self.images = image_names
         self.path = path
-
-        transform = transforms.Compose([transforms.ToPILImage(),
-                                        transforms.RandomAffine(0, translate=(0.1, 0.1)),
-                                        transforms.CenterCrop(190),
-                                        transforms.Resize((128, 128)),
-                                        transforms.ToTensor(),
-                                        transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                                             std=[0.5, 0.5, 0.5])])
-
         self.transform = transform
 
     def __len__(self):

@@ -1,10 +1,12 @@
 import torch
 import torch.nn as nn
+import matplotlib.image as img
 import torchvision.models as models
 
 from os.path import join
 from sklearn.metrics import f1_score, accuracy_score
 
+from data import transform
 
 class ResNet:
     def __init__(self, cfg):
@@ -53,3 +55,10 @@ class ResNet:
 
     def predict(self, images):
         return torch.round(torch.sigmoid(self.model(images)))
+
+    def test(self, image_path):
+        image = img.imread(image_path)
+        image = transform(image).unsqueeze(0)
+
+        return self.predict(image)
+

@@ -232,7 +232,7 @@ class GAN:
                 "{}_discriminator.pth".format(it)
             ))
         if self.cfg["generator"]["save_enable"]:
-            torch.save(self.D.state_dict(), join(
+            torch.save(self.G.state_dict(), join(
                 self.cfg["log_file"],
                 self.cfg["run_name"],
                 self.cfg["checkpoints"],
@@ -242,8 +242,6 @@ class GAN:
     def stepG(self, images, attr_a, attr_b, mask):
         for p in self.D.parameters():
             p.requires_grad = False
-        for p in self.G.parameters():
-            p.requires_grad = True
 
         attr_a_ = (attr_a * 2 - 1) * 0.5
         attr_b_ = (attr_b * 2 - 1) * 0.5
@@ -269,14 +267,12 @@ class GAN:
         return errG
 
     def stepD(self, images, attr_a, attr_b, mask):
-        for p in self.G.parameters():
-            p.requires_grad = False
         for p in self.D.parameters():
             p.requires_grad = True
 
         attr_b_ = (attr_b * 2 - 1) * 0.5
 
-        img_fake = self.G(images, attr_b_, mask)
+        img_fake = self.G(images, attr_b_, mask).detach()
         d_real, dc_real = self.D(images)
         d_fake, dc_fake = self.D(img_fake)
 
