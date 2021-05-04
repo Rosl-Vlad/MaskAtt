@@ -2,6 +2,7 @@ import os
 import yaml
 import torch
 import wandb
+import argparse
 import matplotlib.image as mpimg
 
 from tqdm import tqdm
@@ -35,7 +36,7 @@ def get_data_loaders(cfg):
                               join(cfg["base"], cfg["masks"]),
                               images,
                               attr_images),
-        batch_size=32, shuffle=True, num_workers=cfg["loader_jobs"], drop_last=True)
+        batch_size=cfg["batch_size"], shuffle=True, num_workers=cfg["loader_jobs"], drop_last=True)
 
     loader_valid = DataLoader(
         dataset=DatasetLoader(join(cfg["base"], cfg["images"]),
@@ -57,21 +58,21 @@ def prepare_mask(path, masks, attrs_diff):
 
 
 def get_valid_samples(cfg, loader):
-    fixed_img_a, fixed_att_a, masks = next(iter(loader))
+    fixed_img_a, fixed_att_a, _, masks = next(iter(loader))
     fixed_img_a = fixed_img_a.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else fixed_img_a
     fixed_att_a = fixed_att_a.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else fixed_att_a
     fixed_att_a = fixed_att_a.type(torch.float)
     sample_att_b_list = [fixed_att_a]
     empty_masks = torch.zeros((len(fixed_att_a),
                                len(cfg["data"]["attributes"]),
-                               cfg["data"]["image_size"],
-                               cfg["data"]["image_size"]))
+                               cfg["image_size"],
+                               cfg["image_size"]))
     empty_masks = empty_masks.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else empty_masks
     sample_masks = [empty_masks]
     for i in range(len(cfg["data"]["attributes"])):
         tmp = fixed_att_a.clone()
         tmp[:, i] = 1 - tmp[:, i]
-        mask_tensor = torch.tensor(prepare_mask(cfg["data"]["masks"], masks, tmp != fixed_att_a)).type(torch.float)
+        mask_tensor = torch.tensor(prepare_mask(join(cfg["data"]["base"], cfg["data"]["masks"]), masks, tmp != fixed_att_a)).type(torch.float)
         mask_tensor = mask_tensor.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else mask_tensor
         sample_masks.append(mask_tensor)
         sample_att_b_list.append(tmp)
@@ -122,36 +123,42 @@ def train(cfg):
         for images, attr_a, attr_b, mask in tqdm(train_loader):
             it += 1
 
-            img_a = img_a.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else img_a
-            att_a = att_a.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else att_a
-            att_b = att_b.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else att_b
-            masks = masks.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else masks
+            attr_a = attr_a.type(torch.float)
+            attr_b = attr_b.type(torch.float)
+
+            images = images.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else images
+            attr_a = attr_a.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else attr_a
+            attr_b = attr_b.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else attr_b
+            mask = mask.cuda(cfg["GPU"]["name"]) if cfg["GPU"]["enable"] else mask
 
             if it % 5 != 0:
                 errD = g.stepD(images, attr_a, attr_b, mask)
             else:
                 errG = g.stepG(images, attr_a, attr_b, mask)
 
-        if cfg["wandb"]["enable"] and it % cfg["wandb"]["logs_iter"] == 0:
-            wandb.log(get_log_train(errG, errD))
+            if cfg["wandb"]["enable"] and it % cfg["wandb"]["logs_iter"] == 0:
+                wandb.log(get_log_train(errG, errD))
 
-        if (it + 1) % cfg["fit"]["save_interval"] == 0:
-            g.save_models(it)
+            if it % cfg["fit"]["save_interval"] == 0:
+                g.save_models(it)
 
-        if (it + 1) % cfg["fit"]["valid_interval"] == 0:
-            g.set_mode(mode='eval')
-            validate_data(cfg, g, validation_data, i, it)
-            g.set_mode(mode='train')
+            if it % cfg["fit"]["valid_interval"] == 0:
+                g.set_mode(mode='eval')
+                validate_data(cfg, g, validation_data, i, it)
+                g.set_mode(mode='train')
 
 
 if __name__ == "__main__":
-    f = open("config.yaml", 'r')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', dest='config', type=str, default='config.yaml')
+    args = parser.parse_args()
+
+    f = open(args.config, 'r')
     config = yaml.safe_load(f)["train"]
     f.close()
     if config["run_name"] == "":
         config["run_name"] = datetime.now().strftime('%dd-%mm-%Hh-%Mmin')
 
-        print(config["wandb"])
         if config["wandb"]["run_name"] == "":
             config["wandb"]["run_name"] = config["run_name"]
 

@@ -57,7 +57,7 @@ class GeneratorCustom(nn.Module):
         mask_in_channel = self.n_attrs
         self.mask_enc = nn.ModuleList()
         for i in range(self.n_layers_enc - 1):
-            self.mask_enc.append(Conv2d(mask_in_channel, in_channel * 2 ** i, 2, 4))
+            self.mask_enc.append(Conv2d(mask_in_channel, in_channel * 2 ** i, 2, nn.ReLU, nn.BatchNorm2d, 4))
             mask_in_channel = in_channel * 2 ** i
 
         # <--- mask gate ---> #
@@ -201,14 +201,14 @@ class GAN:
         )
         self.D = Discriminator(
             in_channel=cfg["discriminator"]["in_channel"],
-            n_layers=cfg["discriminator"]["n_layers"],
+            n_layers=cfg["discriminator"]["enc_l"],
             image_size=cfg["image_size"],
             n_attrs=cfg["data"]["num_attrs"],
         )
 
         if cfg["GPU"]["enable"]:
             self.G.cuda(cfg["GPU"]["name"])
-            self.G.cuda(cfg["GPU"]["name"])
+            self.D.cuda(cfg["GPU"]["name"])
 
         self.opt_G = torch.optim.Adam(self.G.parameters(), lr=cfg["fit"]["lr"], betas=(0.5, 0.999))
         self.opt_D = torch.optim.Adam(self.D.parameters(), lr=cfg["fit"]["lr"], betas=(0.5, 0.999))
@@ -242,6 +242,8 @@ class GAN:
     def stepG(self, images, attr_a, attr_b, mask):
         for p in self.D.parameters():
             p.requires_grad = False
+        for p in self.G.parameters():
+            p.requires_grad = True
 
         attr_a_ = (attr_a * 2 - 1) * 0.5
         attr_b_ = (attr_b * 2 - 1) * 0.5
@@ -269,6 +271,8 @@ class GAN:
     def stepD(self, images, attr_a, attr_b, mask):
         for p in self.G.parameters():
             p.requires_grad = False
+        for p in self.D.parameters():
+            p.requires_grad = True
 
         attr_b_ = (attr_b * 2 - 1) * 0.5
 
@@ -278,7 +282,7 @@ class GAN:
 
         wd = d_real.mean() - d_fake.mean()
         df_loss = -wd
-        df_gp = gradient_penalty(self.D, images, img_fake)
+        df_gp = gradient_penalty(self.D, images, img_fake, self.cfg["GPU"]["name"])
         dc_loss = F.binary_cross_entropy_with_logits(dc_real, attr_a)
         d_loss = self.lmd1 * df_loss + self.lmdGP * df_gp + self.lmd3 * dc_loss
 

@@ -54,7 +54,7 @@ class DatasetLoader(Dataset):
     def __getitem__(self, index):
         img_name = self.images[index]
         img_attr = self.labels[index]
-        img_path = join(self.path, img_name)
+        img_path = join(self.path_images, img_name)
         image = img.imread(img_path)
 
         if self.transform is not None:
@@ -67,6 +67,6 @@ class DatasetLoader(Dataset):
         mask = get_influence_mask(join(self.path_masks, self.images[index][:-4]), (attr_a != attr_b).numpy())
 
         if self.ret_mask_path:
-            return img, attr_a, torch.tensor(int(self.images[index][:-4]))
+            return image, attr_a, attr_b, torch.tensor(int(self.images[index][:-4]))
 
         return image, attr_a, attr_b, torch.tensor(mask).type(torch.float)

@@ -8,12 +8,12 @@ train:
   fit:
     num_epoch: 200
     lr: 0.0002
-    save_interval: 5000
-    valid_interval: 3000
+    save_interval: 2000
+    valid_interval: 2000
     lmd1: 100
     lmd2: 10
     lmd3: 1
-    lbdGP: 10
+    lmdGP: 10
 
   generator:
     enc_l: 5
@@ -31,11 +31,11 @@ train:
     save_enable: false
 
   GPU:
-    enable: "true"
-    name: "cuda:0"
+    enable: true
+    name: "cuda:6"
 
   wandb:
-    enable: "true"
+    enable: false
     project: "face-attributes"
     entity: "vroslovets"
     logs_iter: 200
@@ -45,10 +45,10 @@ train:
     batch_size: 32
     batch_size_valid: 16
     loader_jobs: 8
-    base: data
-    images: img_align_celeba/img_align_celeba
-    masks: masks
-    attrs: list_attr_celeba.csv
+    base: "/root/data"
+    images: "img_align_celeba/img_align_celeba"
+    masks: "masks"
+    attrs: "list_attr_celeba.csv"
     num_attrs: 12
     attributes:
       - "Bangs"
