@@ -68,11 +68,11 @@ class MaskConv(nn.Module):
         self.mask = nn.Sequential(
             nn.Conv2d(in_channels * 2, in_channels, kernel_size=4, stride=2),
             nn.BatchNorm2d(in_channels),
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.2, inplace=True),
             ResidualBlock(in_channels),
             nn.ConvTranspose2d(in_channels, in_channels, kernel_size=4, stride=2, padding=0, bias=False),
             nn.BatchNorm2d(in_channels),
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.2, inplace=True),
         )
 
     def forward(self, x, mask):
@@ -88,14 +88,17 @@ class STU(nn.Module):
         self.upsample = nn.ConvTranspose2d(in_dim * 2 + n_attrs, out_dim, 4, 2, 1, bias=False)
         self.reset_gate = nn.Sequential(
             nn.Conv2d(in_dim + out_dim, out_dim, kernel_size, 1, (kernel_size - 1) // 2, bias=False),
+            nn.BatchNorm2d(out_dim),
             nn.Sigmoid()
         )
         self.update_gate = nn.Sequential(
             nn.Conv2d(in_dim + out_dim, out_dim, kernel_size, 1, (kernel_size - 1) // 2, bias=False),
+            nn.BatchNorm2d(out_dim),
             nn.Sigmoid()
         )
         self.hidden = nn.Sequential(
             nn.Conv2d(in_dim + out_dim, out_dim, kernel_size, 1, (kernel_size - 1) // 2, bias=False),
+            nn.BatchNorm2d(out_dim),
             nn.Tanh()
         )
 

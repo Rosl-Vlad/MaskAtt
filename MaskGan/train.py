@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 from gan import GAN
 from data import DatasetLoader, load_data
-from mask_generate import get_influence_mask
+from mask_generate import get_influence_mask, get_influence_mask_v2
 
 
 def set_wandb(cfg):
@@ -53,7 +53,7 @@ def get_data_loaders(cfg):
 def prepare_mask(path, masks, attrs_diff):
     res = []
     for i in range(len(masks)):
-        res.append(get_influence_mask(join(path, str(masks[i].item()).zfill(6)), attrs_diff[i].cpu().numpy()))
+        res.append(get_influence_mask_v2(join(path, str(masks[i].item()).zfill(6)), attrs_diff[i].cpu().numpy()))
     return res
 
 

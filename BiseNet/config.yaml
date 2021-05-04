@@ -1,0 +1,16 @@
+make_datase:
+  mask_size: 128
+  model_path: ""
+  data_path: ""
+  out_dir_path: ""
+
+  GPU:
+    enable: true
+    name: "cuda:0"
+
+test:
+  model_path: ""
+
+  GPU:
+    enable: true
+    name: "cuda:0"
