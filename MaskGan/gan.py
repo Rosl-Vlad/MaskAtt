@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from os.path import join
 
-from blocs import Conv2d, STU, TransposeConv2d, MaskConv
+from MaskGan.blocs import Conv2d, STU, TransposeConv2d, MaskConv
 
 
 class GeneratorCustom(nn.Module):
@@ -23,7 +23,7 @@ class GeneratorCustom(nn.Module):
         self.enc = nn.ModuleList()
         enc_in_channel = 3
         for i in range(n_layers_enc):
-            self.enc.append(Conv2d(enc_in_channel, in_channel * 2 ** i, 2, nn.ReLU, nn.BatchNorm2d, 4))
+            self.enc.append(Conv2d(enc_in_channel, in_channel * 2 ** i, 2, 4))
             enc_in_channel = in_channel * 2 ** i
 
         # <--- STU ---> #
@@ -57,7 +57,7 @@ class GeneratorCustom(nn.Module):
         mask_in_channel = self.n_attrs
         self.mask_enc = nn.ModuleList()
         for i in range(self.n_layers_enc - 1):
-            self.mask_enc.append(Conv2d(mask_in_channel, in_channel * 2 ** i, 2, nn.ReLU, nn.BatchNorm2d, 4))
+            self.mask_enc.append(Conv2d(mask_in_channel, in_channel * 2 ** i, 2, 4))
             mask_in_channel = in_channel * 2 ** i
 
         # <--- mask gate ---> #

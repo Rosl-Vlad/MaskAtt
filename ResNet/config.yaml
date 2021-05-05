@@ -3,6 +3,7 @@ train:
   checkpoints: checkpoints
 
   image_size: 128
+  num_attrs: 12
   pretrained: true
   model_path: ""
   save_enable: true
@@ -22,7 +23,6 @@ train:
     base: "/root/data"
     images: "img_align_celeba/img_align_celeba"
     attrs: "list_attr_celeba.csv"
-    num_attrs: 12
     attributes:
       - "Bangs"
       - "Black_Hair"

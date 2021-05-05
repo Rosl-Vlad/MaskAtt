@@ -1,0 +1,50 @@
+gan:
+  model_path: "/home/veroslovets/Implementation/weights.118.pth"
+
+  setting:
+    enc_l: 5
+    dec_l: 5
+    mask_l: 3
+    inject: 0
+    STU: 3
+    in_channel: 64
+    save_enable: true
+    num_attrs: 12
+
+  GPU:
+    enable: true
+    name: "cuda:2"
+
+mask:
+  model_path: "/home/veroslovets/Implementation/79999_iter.pth"
+  mask_size: 128
+
+  GPU:
+    enable: true
+    name: "cuda:0"
+
+resnet:
+  pretrained: true
+  model_path: "/home/veroslovets/Implementation/13_epoch_RESNET_PROD.pth"
+  num_attrs: 12
+
+  GPU:
+    enable: true
+    name: "cuda:0"
+
+env:
+  out_dir: "/home/veroslovets/Implementation/out"
+
+  attributes:
+    - "Bangs"
+    - "Black_Hair"
+    - "Blond_Hair"
+    - "Brown_Hair"
+    - "Bushy_Eyebrows"
+    - "Eyeglasses"
+    - "Male"
+    - "Mouth_Slightly_Open"
+    - "Mustache"
+    - "No_Beard"
+    - "Pale_Skin"
+    - "Young"

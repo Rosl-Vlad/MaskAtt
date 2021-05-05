@@ -32,8 +32,9 @@ mask_influence = np.array(
 )
 
 
-def get_influence_mask(mask_path, attr, size=(128, 128)):
-    mask = hkl.load(mask_path)
+def get_influence_mask(mask_path, attr, size=(128, 128), mask=None):
+    if mask is None:
+        mask = hkl.load(mask_path)
     res = np.zeros((len(attr), mask.shape[0], mask.shape[1]))
     attr = abs(attr.astype(bool))
     v = np.argwhere(mask_influence[attr] == 1)
@@ -71,7 +72,6 @@ def get_influence_mask_v2(mask_path, attr, size=(128, 128)):
     attr = abs(attr.astype(bool))
     v = np.argwhere(mask_influence_v2[np.ones_like(attr)] == 1)
     influence_mask_classes_per_attr = np.split(v[:, 1], (np.argwhere(np.diff(v, axis=0)[:, 0] != 0) + 1).flatten())
-    print(influence_mask_classes_per_attr)
     for i, arg_attr in enumerate(range(len(attr))):
         mask_c = mask.copy().astype(float)
         mask_c[np.isin(mask_c, influence_mask_classes_per_attr[i]) == False] = 0

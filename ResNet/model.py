@@ -6,13 +6,14 @@ import torchvision.models as models
 from os.path import join
 from sklearn.metrics import f1_score, accuracy_score
 
-from data import transform
+from ResNet.data import transform
+
 
 class ResNet:
     def __init__(self, cfg):
         self.cfg = cfg
         self.model = models.resnet18(pretrained=cfg["pretrained"])
-        self.model.fc = nn.Linear(512, cfg["data"]["num_attrs"])
+        self.model.fc = nn.Linear(512, cfg["num_attrs"])
 
         if cfg["model_path"] != "":
             self.model.load_state_dict(
@@ -56,9 +57,10 @@ class ResNet:
     def predict(self, images):
         return torch.round(torch.sigmoid(self.model(images)))
 
-    def test(self, image_path):
+    def inference(self, image_path):
         image = img.imread(image_path)
         image = transform(image).unsqueeze(0)
+        image = image.cuda(self.cfg["GPU"]["name"]) if self.cfg["GPU"]["enable"] else image
 
         return self.predict(image)
 

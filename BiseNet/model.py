@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 
-from resnet import Resnet18
+from BiseNet.resnet import Resnet18
 # from modules.bn import InPlaceABNSync as BatchNorm2d
 
 

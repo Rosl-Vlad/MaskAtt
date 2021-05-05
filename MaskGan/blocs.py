@@ -16,12 +16,12 @@ class DenseConv(nn.Module):
 
 
 class Conv2d(nn.Module):
-    def __init__(self, in_channels, out_channel, stride, activation, normalisation, kernel_size=4, padding=1):
+    def __init__(self, in_channels, out_channel, stride, kernel_size=4, padding=1):
         super().__init__()
         self.conv = nn.Sequential(
                 nn.Conv2d(in_channels, out_channel, kernel_size=kernel_size, stride=stride, padding=padding, bias=False),
-                normalisation(out_channel),
-                activation(),
+                nn.BatchNorm2d(out_channel),
+                nn.LeakyReLU(negative_slope=0.2, inplace=True),
             )
 
     def forward(self, x):
@@ -41,7 +41,7 @@ class TransposeConv2d(nn.Module):
             self.conv = nn.Sequential(
                 nn.ConvTranspose2d(in_channels, out_channel, kernel_size=4, stride=2, padding=1, bias=False),
                 nn.BatchNorm2d(out_channel),
-                nn.ReLU(),
+                nn.ReLU(inplace=True),
             )
 
     def forward(self, x):

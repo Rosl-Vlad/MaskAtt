@@ -6,7 +6,8 @@ import matplotlib.image as img
 from os.path import join
 from torchvision import transforms
 from torch.utils.data import Dataset
-from mask_generate import get_influence_mask, get_influence_mask_v2
+
+from MaskGan.mask_generate import get_influence_mask, get_influence_mask_v2
 
 
 def load_data(cfg):
