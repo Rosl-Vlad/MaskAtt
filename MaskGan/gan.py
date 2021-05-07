@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from os.path import join
 
-from MaskGan.blocs import Conv2d, STU, TransposeConv2d, MaskConv
+from blocs import Conv2d, STU, TransposeConv2d, MaskConv, MaskGate
 
 
 class GeneratorCustom(nn.Module):
@@ -39,7 +39,7 @@ class GeneratorCustom(nn.Module):
         dec_in_channel = dec_n_channel + self.n_attrs
         for i in range(n_layers_dec):
             if i + 1 == n_layers_dec:
-                self.dec.append(TransposeConv2d(dec_in_channel, 3, is_tanh=True))
+                self.dec.append(TransposeConv2d(dec_in_channel + dec_in_channel + n_attrs, 3, is_tanh=True))
                 continue
 
             if self.n_skip >= i > 0:
@@ -56,15 +56,27 @@ class GeneratorCustom(nn.Module):
         # <--- mask enc ---> #
         mask_in_channel = self.n_attrs
         self.mask_enc = nn.ModuleList()
-        for i in range(self.n_layers_enc - 1):
+        for i in range(self.n_layers_enc):
             self.mask_enc.append(Conv2d(mask_in_channel, in_channel * 2 ** i, 2, 4))
             mask_in_channel = in_channel * 2 ** i
+
+        # <--- mask decode ---> #
+        dec_mask_in_channel = 2 ** (int(np.log2(in_channel)) + n_layers_enc - 1)
+        dec_mask_n_channel = dec_mask_in_channel
+        self.mask_dec = nn.ModuleList()
+        for i in range(self.n_layers_dec):
+            print(dec_mask_in_channel, dec_mask_n_channel // (2 ** (i + 1)))
+            if i + 1 == n_layers_dec:
+                self.mask_dec.append(TransposeConv2d(dec_mask_in_channel, n_attrs, is_tanh=True))
+                continue
+            self.mask_dec.append(TransposeConv2d(dec_mask_in_channel, dec_mask_n_channel // (2 ** (i + 1))))
+            dec_mask_in_channel = dec_mask_n_channel // (2 ** (i + 1))
 
         # <--- mask gate ---> #
         self.mask_gates = nn.ModuleList()
         dec_n_channel = 2 ** (int(np.log2(in_channel)) + n_layers_enc - 2)
         for i in range(self.masks_layers):
-            self.mask_gates.append(MaskConv(dec_n_channel))
+            self.mask_gates.append(MaskGate(dec_n_channel))
             dec_n_channel = dec_n_channel // 2
 
     def encode(self, x):
@@ -77,10 +89,12 @@ class GeneratorCustom(nn.Module):
 
     def encode_mask(self, mask):
         hiddens = []
-        for i in range(self.n_layers_enc - 1):
+        for i in range(self.n_layers_enc):
             mask = self.mask_enc[i](mask)
-            hiddens.append(mask)
 
+        for i in range(self.n_layers_enc):
+            mask = self.mask_dec[i](mask)
+            hiddens.append(mask)
         return hiddens
 
     def decode(self, hiddens, attr, mask):
@@ -93,24 +107,25 @@ class GeneratorCustom(nn.Module):
         n, _, h, w = h_state.size()
         a = attr.view((n, self.n_attrs, 1, 1)).expand((n, self.n_attrs, h, w))
         z = self.dec[0](torch.cat([h_state, a], dim=1))
-        z = self.mask_gates[0](z, hidden_mask[-1])
+
+        z = self.mask_gates[0](z, hidden_mask[0])
         for i in range(self.n_layers_dec - 1):
             if i < self.n_skip:
                 skip, h_state = self.stu[-(i + 1)](hiddens[-(i + 2)], h_state, attr)
                 z = torch.cat([z, skip], dim=1)
 
-            if i < self.n_inject:
+            if i <= self.n_inject:
                 n, _, h, w = z.size()
                 a = attr.view((n, self.n_attrs, 1, 1)).expand((n, self.n_attrs, h, w))
                 z = torch.cat([z, a], dim=1)
 
             if i < self.masks_layers - 1:
                 z = self.dec[i + 1](z)
-                z = self.mask_gates[i + 1](z, hidden_mask[-(i + 2)])
+                z = self.mask_gates[i + 1](z, hidden_mask[i + 1])
             else:
                 z = self.dec[i + 1](z)
 
-        return z
+        return z, hidden_mask[-1]
 
     def forward(self, x=None, a=None, mask=None, mode="enc-dec"):
         if mode == "enc":
@@ -139,12 +154,12 @@ class Discriminator(nn.Module):
         feature_size = image_size // 2 ** n_layers
         self.fc_adv = nn.Sequential(
             nn.Linear(in_channel * 2 ** (n_layers - 1) * feature_size ** 2, fc_dim),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(fc_dim, 1)
         )
         self.fc_att = nn.Sequential(
             nn.Linear(in_channel * 2 ** (n_layers - 1) * feature_size ** 2, fc_dim),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(fc_dim, n_attrs),
         )
 
@@ -187,6 +202,7 @@ class GAN:
         self.lmd1 = cfg["fit"]["lmd1"]
         self.lmd2 = cfg["fit"]["lmd2"]
         self.lmd3 = cfg["fit"]["lmd3"]
+        self.lmd4 = cfg["fit"]["lmd4"]
         self.lmdGP = cfg["fit"]["lmdGP"]
 
         self.G = GeneratorCustom(
@@ -246,14 +262,15 @@ class GAN:
         attr_b_ = (attr_b * 2 - 1) * 0.5
 
         h = self.G(images, mode='enc')
-        img_fake = self.G(h, attr_b_, mask, mode='dec')
-        img_real = self.G(h, attr_a_, mask, mode='dec')
+        img_fake, mask_fake = self.G(h, attr_b_, mask, mode='dec')
+        img_real, mask_real = self.G(h, attr_a_, torch.zeros_like(mask), mode='dec')
         d_fake, dc_fake = self.D(img_fake)
 
         gf_loss = -d_fake.mean()
         gc_loss = F.binary_cross_entropy_with_logits(dc_fake, attr_b)
         gr_loss = F.l1_loss(img_real, images)
-        g_loss = self.lmd1 * gr_loss + self.lmd2 * gc_loss + self.lmd3 * gf_loss
+        mask_loss = F.mse_loss(mask_fake, mask)
+        g_loss = self.lmd1 * gr_loss + self.lmd2 * gc_loss + self.lmd3 * gf_loss + self.lmd4 * mask_loss
 
         self.opt_G.zero_grad()
         g_loss.backward()
@@ -261,7 +278,8 @@ class GAN:
 
         errG = {
             'g_loss': g_loss.item(), 'gf_loss': gf_loss.item(),
-            'gc_loss': gc_loss.item(), 'gr_loss': gr_loss.item()
+            'gc_loss': gc_loss.item(), 'gr_loss': gr_loss.item(),
+            'g_mask_loss': mask_loss.item(),
         }
         return errG
 
@@ -271,15 +289,17 @@ class GAN:
 
         attr_b_ = (attr_b * 2 - 1) * 0.5
 
-        img_fake = self.G(images, attr_b_, mask).detach()
+        img_fake, mask_fake = self.G(images, attr_b_, mask)
         d_real, dc_real = self.D(images)
         d_fake, dc_fake = self.D(img_fake)
+        img_fake = img_fake.detach()
 
         wd = d_real.mean() - d_fake.mean()
         df_loss = -wd
         df_gp = gradient_penalty(self.D, images, img_fake, self.cfg["GPU"]["name"])
         dc_loss = F.binary_cross_entropy_with_logits(dc_real, attr_a)
-        d_loss = df_loss + self.lmdGP * df_gp + self.lmd3 * dc_loss
+        mask_loss = F.mse_loss(mask_fake, mask)
+        d_loss = df_loss + self.lmdGP * df_gp + self.lmd3 * dc_loss + self.lmd4 * mask_loss
 
         self.opt_D.zero_grad()
         d_loss.backward()
@@ -287,6 +307,7 @@ class GAN:
 
         errD = {
             'd_loss': d_loss.item(), 'df_loss': df_loss.item(),
-            'df_gp': df_gp.item(), 'dc_loss': dc_loss.item()
+            'df_gp': df_gp.item(), 'dc_loss': dc_loss.item(),
+            'd_mask_loss': mask_loss.item(),
         }
         return errD

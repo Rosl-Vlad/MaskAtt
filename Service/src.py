@@ -23,20 +23,33 @@ class Implementation:
         attr_a = self.attr_clf.inference(image_path)
         attr_b = attr_a.clone()
         self.sprintf_attrs(attr_a)
-        attr_b = attr_b.type(torch.float)
-        attr_b = (attr_b * 2 - 1) * 0.5
         print("Select attr to change - 'att:value, att:value'")
         changes = input().split(", ")
         for c in changes:
             att, value = c.split(":")
             changes_.append(att)
-            attr_b[0][self.d_attrs[att]] = float(value)
-        return attr_a, attr_b, changes_
+            attr_b[0][self.d_attrs[att]] = int(value)
+
+        attr_diff = attr_a[0] != attr_b[0]
+        return attr_diff, attr_b, changes_
 
     def generate(self, image_path):
         attr_a, attr_b, changes_ = self.get_attrs(image_path)
         mask = self.mask_model.predict(image_path)
+
+        attr_b = attr_b.type(torch.float)
+        attr_b = (attr_b * 2 - 1) * 0.5
+
         self.gan.generate(image_path, attr_a, attr_b, mask, path_save=self.cfg["env"]["out_dir"], changes_=changes_)
+
+    def image_manipulate(self, image_path, attr_a, attr_b):
+        attr_diff = attr_a[0] != attr_b[0]
+
+        attr_b = attr_b.type(torch.float)
+        attr_b = (attr_b * 2 - 1) * 0.5
+
+        mask = self.mask_model.predict(image_path)
+        self.gan.generate(image_path, attr_diff, attr_b, mask, path_save=self.cfg["env"]["out_dir"])
 
     def sprintf_attrs(self, attrs):
         for i, att in enumerate(attrs[0]):

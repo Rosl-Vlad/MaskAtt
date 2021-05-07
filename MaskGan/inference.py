@@ -30,7 +30,7 @@ class GAN:
             self.model.cuda(cfg["GPU"]["name"])
 
         self.transform = transforms.Compose([transforms.ToPILImage(),
-                                             transforms.CenterCrop(170),
+                                             #transforms.CenterCrop(170),
                                              transforms.Resize((128, 128)),
                                              transforms.ToTensor(),
                                              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -41,9 +41,9 @@ class GAN:
 
         self.model.eval()
 
-    def generate(self, image_path, attr_a, attr_b, mask=None, mask_path="", path_save="", changes_=[]):
+    def generate(self, image_path, attr_diff, attr_b, mask=None, mask_path="", path_save="", changes_=[]):
         masks = torch.tensor(
-            get_influence_mask(mask_path, (attr_a[0] != attr_b[0]).cpu().detach().numpy(), mask=mask)
+            get_influence_mask(mask_path, attr_diff.cpu().detach().numpy(), mask=mask)
         ).unsqueeze(0)
         img_name = image_path.split('/')[-1]
         image = img.imread(image_path)
@@ -55,4 +55,6 @@ class GAN:
 
         pred = self.model(image, attr_b, masks.type(torch.float))
 
-        utils.save_image(pred, join(path_save, "gen_" + "_".join(changes_) + "_" + img_name), nrow=1, normalize=True)
+        utils.save_image(pred, join(path_save, "gen_" + img_name), nrow=1, normalize=True)
+
+        #utils.save_image(pred, join(path_save, "gen_" + "_".join(changes_) + "_" + img_name), nrow=1, normalize=True)

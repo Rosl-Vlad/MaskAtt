@@ -53,7 +53,7 @@ def get_data_loaders(cfg):
 def prepare_mask(path, masks, attrs_diff):
     res = []
     for i in range(len(masks)):
-        res.append(get_influence_mask_v2(join(path, str(masks[i].item()).zfill(6)), attrs_diff[i].cpu().numpy()))
+        res.append(get_influence_mask(join(path, str(masks[i].item()).zfill(6)), attrs_diff[i].cpu().numpy()))
     return res
 
 
@@ -88,7 +88,7 @@ def validate_data(cfg, g, validation_data, epoch, it):
             att_b_ = (att_b * 2 - 1) * 0.5
             if i > 0:
                 att_b_[..., i - 1] = att_b_[..., i - 1] * 1 / 0.5
-            samples.append(g.G(fixed_img_a, att_b_, sample_masks[i]))
+            samples.append(g.G(fixed_img_a, att_b_, sample_masks[i])[0])
         samples = torch.cat(samples, dim=3)
         path = join(
             cfg["log_file"], cfg["run_name"], 'generated_images',
@@ -110,6 +110,9 @@ def get_log_train(logger_g, logger_d):
         "train adv loss generator": logger_g["gf_loss"],
         "train total loss generator": logger_g["g_loss"],
         "train rec loss generator": logger_g["gr_loss"],
+
+        "train mask loss generator": logger_g["g_mask_loss"],
+        "train mask loss discriminator": logger_d["d_mask_loss"],
     }
 
 

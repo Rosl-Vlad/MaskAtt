@@ -7,7 +7,7 @@ from os.path import join
 from torchvision import transforms
 from torch.utils.data import Dataset
 
-from MaskGan.mask_generate import get_influence_mask, get_influence_mask_v2
+from mask_generate import get_influence_mask, get_influence_mask_v2
 
 
 def load_data(cfg):
@@ -65,8 +65,8 @@ class DatasetLoader(Dataset):
         idx = random.randrange(0, len(self.images))
         attr_b = torch.tensor((self.labels[idx] + 1) // 2)
 
-        #mask = get_influence_mask(join(self.path_masks, self.images[index][:-4]), (attr_a != attr_b).numpy())
-        mask = get_influence_mask_v2(join(self.path_masks, self.images[index][:-4]), attr_a.numpy())
+        mask = get_influence_mask(join(self.path_masks, self.images[index][:-4]), (attr_a != attr_b).numpy())
+        #mask = get_influence_mask_v2(join(self.path_masks, self.images[index][:-4]), attr_a.numpy())
 
         if self.ret_mask_path:
             return image, attr_a, attr_b, torch.tensor(int(self.images[index][:-4]))

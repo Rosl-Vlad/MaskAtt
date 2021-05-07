@@ -80,6 +80,26 @@ class MaskConv(nn.Module):
         return self.mask(h) + x
 
 
+class MaskGate(nn.Module):
+    def __init__(self, in_channels):
+        super(MaskGate, self).__init__()
+        self.mask_enc = nn.Sequential(
+            nn.Conv2d(in_channels * 2, in_channels, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+        )
+        self.res = nn.Sequential(
+            ResidualBlock(in_channels),
+            nn.BatchNorm2d(in_channels),
+            ResidualBlock(in_channels),
+        )
+
+    def forward(self, x, mask):
+        h = torch.cat([x, mask], dim=1)
+        h = self.mask_enc(h)
+        m = self.res(h)
+        return m * x + m
+
+
 class STU(nn.Module):
     def __init__(self, in_dim, out_dim, kernel_size, n_attrs):
         super(STU, self).__init__()
@@ -88,17 +108,14 @@ class STU(nn.Module):
         self.upsample = nn.ConvTranspose2d(in_dim * 2 + n_attrs, out_dim, 4, 2, 1, bias=False)
         self.reset_gate = nn.Sequential(
             nn.Conv2d(in_dim + out_dim, out_dim, kernel_size, 1, (kernel_size - 1) // 2, bias=False),
-            nn.BatchNorm2d(out_dim),
             nn.Sigmoid()
         )
         self.update_gate = nn.Sequential(
             nn.Conv2d(in_dim + out_dim, out_dim, kernel_size, 1, (kernel_size - 1) // 2, bias=False),
-            nn.BatchNorm2d(out_dim),
             nn.Sigmoid()
         )
         self.hidden = nn.Sequential(
             nn.Conv2d(in_dim + out_dim, out_dim, kernel_size, 1, (kernel_size - 1) // 2, bias=False),
-            nn.BatchNorm2d(out_dim),
             nn.Tanh()
         )
 

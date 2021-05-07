@@ -32,6 +32,9 @@ resnet:
     enable: true
     name: "cuda:0"
 
+tg_bot:
+  image_path_save: "/home/veroslovets/Implementation/out"
+
 env:
   out_dir: "/home/veroslovets/Implementation/out"
 

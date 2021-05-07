@@ -13,14 +13,15 @@ train:
     lmd1: 100
     lmd2: 10
     lmd3: 1
+    lmd4: 5
     lmdGP: 10
 
   generator:
     enc_l: 5
     dec_l: 5
-    mask_l: 3
-    inject: 3
-    STU: 3
+    mask_l: 4
+    inject: 4
+    STU: 4
     in_channel: 64
     save_enable: true
 

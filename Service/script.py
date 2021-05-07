@@ -1,4 +1,5 @@
 import yaml
+
 from src import Implementation
 
 if __name__ == "__main__":
@@ -7,7 +8,7 @@ if __name__ == "__main__":
     f.close()
 
     i = Implementation(config)
-    print("ready")
+    print("Ready!")
     while True:
         img_path = input()
         i.generate(img_path)
