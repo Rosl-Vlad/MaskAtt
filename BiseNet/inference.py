@@ -15,7 +15,10 @@ class MaskModel:
         self.model = BiSeNet(n_classes=n_classes)
         if cfg["GPU"]["enable"]:
             self.model.cuda(cfg["GPU"]["name"])
-        self.model.load_state_dict(torch.load(cfg["model_path"]))
+            self.model.load_state_dict(torch.load(cfg["model_path"], map_location=cfg["GPU"]["name"]))
+        else:
+            self.model.load_state_dict(torch.load(cfg["model_path"], map_location=torch.device('cpu')))
+
         self.model.eval()
 
     def predict(self, image_path):

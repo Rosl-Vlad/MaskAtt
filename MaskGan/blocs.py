@@ -108,14 +108,17 @@ class STU(nn.Module):
         self.upsample = nn.ConvTranspose2d(in_dim * 2 + n_attrs, out_dim, 4, 2, 1, bias=False)
         self.reset_gate = nn.Sequential(
             nn.Conv2d(in_dim + out_dim, out_dim, kernel_size, 1, (kernel_size - 1) // 2, bias=False),
+            nn.BatchNorm2d(out_dim),
             nn.Sigmoid()
         )
         self.update_gate = nn.Sequential(
             nn.Conv2d(in_dim + out_dim, out_dim, kernel_size, 1, (kernel_size - 1) // 2, bias=False),
+            nn.BatchNorm2d(out_dim),
             nn.Sigmoid()
         )
         self.hidden = nn.Sequential(
             nn.Conv2d(in_dim + out_dim, out_dim, kernel_size, 1, (kernel_size - 1) // 2, bias=False),
+            nn.BatchNorm2d(out_dim),
             nn.Tanh()
         )
 

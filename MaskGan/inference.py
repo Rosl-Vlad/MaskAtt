@@ -7,8 +7,6 @@ from torchvision import transforms, utils
 from MaskGan.mask_generate import get_influence_mask
 from MaskGan.gan import GeneratorCustom
 
-from torchvision.utils import save_image
-
 
 class GAN:
     def __init__(self, cfg):
@@ -24,10 +22,11 @@ class GAN:
             n_attrs=cfg["setting"]["num_attrs"],
         )
 
-        self.model.load_state_dict(torch.load(cfg["model_path"], map_location=cfg["GPU"]["name"])["G"])
-
         if cfg["GPU"]["enable"]:
             self.model.cuda(cfg["GPU"]["name"])
+            self.model.load_state_dict(torch.load(cfg["model_path"], map_location=cfg["GPU"]["name"])["G"])
+        else:
+            self.model.load_state_dict(torch.load(cfg["model_path"], map_location=torch.device('cpu'))["G"])
 
         self.transform = transforms.Compose([transforms.ToPILImage(),
                                              #transforms.CenterCrop(170),

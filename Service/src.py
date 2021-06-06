@@ -11,6 +11,7 @@ class Implementation:
         self.cfg = cfg
         self.gan = GAN(cfg["gan"])
         self.attr_clf = ResNet(cfg["resnet"])
+        self.attr_clf.set_mode()
         self.mask_model = MaskModel(cfg["mask"])
 
         os.makedirs(cfg["env"]["out_dir"], exist_ok=True)
@@ -46,7 +47,7 @@ class Implementation:
         attr_diff = attr_a[0] != attr_b[0]
 
         attr_b = attr_b.type(torch.float)
-        attr_b = (attr_b * 2 - 1) * 0.5
+        #attr_b = (attr_b * 2 - 1) * 0.5
 
         mask = self.mask_model.predict(image_path)
         self.gan.generate(image_path, attr_diff, attr_b, mask, path_save=self.cfg["env"]["out_dir"])

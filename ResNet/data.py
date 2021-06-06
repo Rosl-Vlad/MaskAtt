@@ -11,8 +11,6 @@ from MaskGan import load_data
 
 
 transform = transforms.Compose([transforms.ToPILImage(),
-                                #transforms.RandomAffine(0, translate=(0.1, 0.1)),
-                                transforms.CenterCrop(190),
                                 transforms.Resize((128, 128)),
                                 transforms.ToTensor(),
                                 transforms.Normalize(mean=[0.5, 0.5, 0.5],

@@ -5,17 +5,18 @@ import torch.nn.functional as F
 
 from os.path import join
 
-from blocs import Conv2d, STU, TransposeConv2d, MaskConv, MaskGate
+from MaskGan.blocs import Conv2d, STU, TransposeConv2d, MaskConv, MaskGate
 
 
 class GeneratorCustom(nn.Module):
     def __init__(self, in_channel=64, n_layers_enc=5, n_layers_dec=5,
-                 n_attrs=12, n_STU=3, n_inject=0, n_masks=3):
+                 n_attrs=12, n_STU=3, n_inject=0, n_res=1, n_masks=3):
         super(GeneratorCustom, self).__init__()
         self.n_attrs = n_attrs
         self.n_skip = n_STU
         self.n_layers_enc = n_layers_enc
         self.n_layers_dec = n_layers_dec
+        self.n_res = n_res
         self.n_inject = n_inject
         self.masks_layers = n_masks
 
@@ -39,7 +40,7 @@ class GeneratorCustom(nn.Module):
         dec_in_channel = dec_n_channel + self.n_attrs
         for i in range(n_layers_dec):
             if i + 1 == n_layers_dec:
-                self.dec.append(TransposeConv2d(dec_in_channel + dec_in_channel + n_attrs, 3, is_tanh=True))
+                self.dec.append(TransposeConv2d(dec_in_channel, 3, is_tanh=True))
                 continue
 
             if self.n_skip >= i > 0:
@@ -54,29 +55,17 @@ class GeneratorCustom(nn.Module):
             dec_in_channel = dec_n_channel // (2 ** (i + 1))
 
         # <--- mask enc ---> #
-        mask_in_channel = self.n_attrs
+        mask_in_channel = 12
         self.mask_enc = nn.ModuleList()
-        for i in range(self.n_layers_enc):
+        for i in range(self.n_layers_enc - 1):
             self.mask_enc.append(Conv2d(mask_in_channel, in_channel * 2 ** i, 2, 4))
             mask_in_channel = in_channel * 2 ** i
-
-        # <--- mask decode ---> #
-        dec_mask_in_channel = 2 ** (int(np.log2(in_channel)) + n_layers_enc - 1)
-        dec_mask_n_channel = dec_mask_in_channel
-        self.mask_dec = nn.ModuleList()
-        for i in range(self.n_layers_dec):
-            print(dec_mask_in_channel, dec_mask_n_channel // (2 ** (i + 1)))
-            if i + 1 == n_layers_dec:
-                self.mask_dec.append(TransposeConv2d(dec_mask_in_channel, n_attrs, is_tanh=True))
-                continue
-            self.mask_dec.append(TransposeConv2d(dec_mask_in_channel, dec_mask_n_channel // (2 ** (i + 1))))
-            dec_mask_in_channel = dec_mask_n_channel // (2 ** (i + 1))
 
         # <--- mask gate ---> #
         self.mask_gates = nn.ModuleList()
         dec_n_channel = 2 ** (int(np.log2(in_channel)) + n_layers_enc - 2)
         for i in range(self.masks_layers):
-            self.mask_gates.append(MaskGate(dec_n_channel))
+            self.mask_gates.append(MaskConv(dec_n_channel))
             dec_n_channel = dec_n_channel // 2
 
     def encode(self, x):
@@ -89,12 +78,10 @@ class GeneratorCustom(nn.Module):
 
     def encode_mask(self, mask):
         hiddens = []
-        for i in range(self.n_layers_enc):
+        for i in range(self.n_layers_enc - 1):
             mask = self.mask_enc[i](mask)
-
-        for i in range(self.n_layers_enc):
-            mask = self.mask_dec[i](mask)
             hiddens.append(mask)
+
         return hiddens
 
     def decode(self, hiddens, attr, mask):
@@ -107,25 +94,24 @@ class GeneratorCustom(nn.Module):
         n, _, h, w = h_state.size()
         a = attr.view((n, self.n_attrs, 1, 1)).expand((n, self.n_attrs, h, w))
         z = self.dec[0](torch.cat([h_state, a], dim=1))
-
-        z = self.mask_gates[0](z, hidden_mask[0])
+        z = self.mask_gates[0](z, hidden_mask[-1])
         for i in range(self.n_layers_dec - 1):
             if i < self.n_skip:
                 skip, h_state = self.stu[-(i + 1)](hiddens[-(i + 2)], h_state, attr)
                 z = torch.cat([z, skip], dim=1)
 
-            if i <= self.n_inject:
+            if i < self.n_inject:
                 n, _, h, w = z.size()
                 a = attr.view((n, self.n_attrs, 1, 1)).expand((n, self.n_attrs, h, w))
                 z = torch.cat([z, a], dim=1)
 
             if i < self.masks_layers - 1:
                 z = self.dec[i + 1](z)
-                z = self.mask_gates[i + 1](z, hidden_mask[i + 1])
+                z = self.mask_gates[i + 1](z, hidden_mask[-(i + 2)])
             else:
                 z = self.dec[i + 1](z)
 
-        return z, hidden_mask[-1]
+        return z
 
     def forward(self, x=None, a=None, mask=None, mode="enc-dec"):
         if mode == "enc":
@@ -173,7 +159,7 @@ class Discriminator(nn.Module):
 
 def gradient_penalty(f, real, fake=None, gpu=None):
     def interpolate(a, b=None):
-        if b is None:  # interpolation in DRAGAN
+        if b is None:
             beta = torch.rand_like(a)
             b = a + 0.5 * a.var().sqrt() * beta
         alpha = torch.rand(a.size(0), 1, 1, 1)

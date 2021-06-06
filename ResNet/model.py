@@ -12,12 +12,14 @@ from ResNet.data import transform
 class ResNet:
     def __init__(self, cfg):
         self.cfg = cfg
-        self.model = models.resnet18(pretrained=cfg["pretrained"])
-        self.model.fc = nn.Linear(512, cfg["num_attrs"])
+        self.model = models.mobilenet_v2(pretrained=cfg["pretrained"])
+        self.model.classifier = nn.Linear(1280, cfg["num_attrs"])
 
         if cfg["model_path"] != "":
-            self.model.load_state_dict(
-                torch.load(cfg["model_path"], map_location=cfg["GPU"]["name"]))
+            if cfg["GPU"]["enable"]:
+                self.model.load_state_dict(torch.load(cfg["model_path"], map_location=cfg["GPU"]["name"]))
+            else:
+                self.model.load_state_dict(torch.load(cfg["model_path"], map_location=torch.device('cpu')))
 
         if cfg["GPU"]["enable"]:
             self.model.cuda(cfg["GPU"]["name"])

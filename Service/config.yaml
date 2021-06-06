@@ -1,5 +1,5 @@
 gan:
-  model_path: "/home/veroslovets/Implementation/weights.118.pth"
+  model_path: "/home/veroslovets/Implementation/weights.145.pth"
 
   setting:
     enc_l: 5
@@ -12,7 +12,7 @@ gan:
     num_attrs: 12
 
   GPU:
-    enable: true
+    enable: false
     name: "cuda:2"
 
 mask:
@@ -20,16 +20,16 @@ mask:
   mask_size: 128
 
   GPU:
-    enable: true
+    enable: false
     name: "cuda:0"
 
 resnet:
   pretrained: true
-  model_path: "/home/veroslovets/Implementation/13_epoch_RESNET_PROD.pth"
+  model_path: "/home/veroslovets/GANs/attributes/resnetModels/7_epoch_0.5.pth"
   num_attrs: 12
 
   GPU:
-    enable: true
+    enable: false
     name: "cuda:0"
 
 tg_bot:
