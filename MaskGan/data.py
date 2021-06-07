@@ -44,8 +44,8 @@ class DatasetLoader(Dataset):
             self.images = self.images[:182000]
             self.labels = self.labels[:182000]
         if mode == 'valid':
-            self.images = self.images[182000:182637]
-            self.labels = self.labels[182000:182637]
+            self.images = self.images[182001:]
+            self.labels = self.labels[182001:]
 
         self.transform = transform
 
