@@ -18,9 +18,9 @@ make install-data
 ### Configs
 All train and inference parameters customized in ``config.yaml`` files.
 
-## Approach
+## Examples
+![alt text](img/1.jpg)
 
-coming-soon...
 
 ## References
 - [AttGan implementation](https://github.com/LynnHo/AttGAN-Tensorflow), [paper](https://arxiv.org/pdf/1711.10678.pdf).
